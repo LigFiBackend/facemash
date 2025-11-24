@@ -1,7 +1,8 @@
 package com.example.facesmash.service;
 
 import com.example.facesmash.model.Person;
-import com.example.facesmash.repository.repository;
+import com.example.facesmash.repository.PersonRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,7 @@ class AlreadyHavePerson extends Exception {
 public class ServicePerson {
 
     @Autowired
-    private repository repo;
+    private PersonRepository repo;
 
     public String new_person(Person person) {
         try {
@@ -34,8 +35,8 @@ public class ServicePerson {
     }
     public ArrayList<Person> get_person_by_id(Long id_1, Long id_2){
         ArrayList<Person> answer = new ArrayList<>();
-        answer.add(repo.getById(id_1));
-        answer.add(repo.getById(id_2));
+        answer.add(repo.findById(id_1).orElse(null));
+        answer.add(repo.findById(id_2).orElse(null));
         return answer;
     }
 
@@ -43,12 +44,17 @@ public class ServicePerson {
         return repo.findAll();
     }
     public Person getPersonById(Long Id){
-        return repo.getReferenceById(Id);
+        return repo.findById(Id).orElse(null);
     }
     public void setNewElo(Long Id, int elo){
         repo.setNewElo(Id, elo);
     }
     public int sizeDB(){
         return repo.findAll().size();
+    }
+    @Transactional
+    public void updateRatings(Long winnerId, int newA, Long loserId, int newB) {
+        repo.setNewElo(winnerId, newA);
+        repo.setNewElo(loserId, newB);
     }
 }

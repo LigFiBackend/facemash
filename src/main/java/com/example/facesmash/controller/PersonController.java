@@ -14,75 +14,60 @@ public class PersonController {
     @Autowired
     private ServicePerson serv;
 
-    private List<Person> getRandomPair(long id_lose){
+    private List<Person> getRandomPair(Long excludeId) {
         Random random = new Random();
-        HashSet<Integer> pare_0 = new HashSet<>();
-        while(pare_0.size() < 2){
+        HashSet<Integer> indices = new HashSet<>();
+
+        // Собираем 2 случайных индекса
+        while (indices.size() < 2) {
             int randomNumber = random.nextInt(serv.sizeDB());
-            if (randomNumber != (int) id_lose){
-                pare_0.add(randomNumber);
+            if (excludeId == null || randomNumber != excludeId.intValue()) {
+                indices.add(randomNumber);
             }
         }
-        ArrayList<Integer> pare_1 = new ArrayList<>(pare_0);
+
+        List<Integer> idxList = new ArrayList<>(indices);
         List<Person> allPersons = serv.getAllPersons();
 
-        List<Person> pair = allPersons.subList(pare_1.getFirst(), pare_1.get(1));
+        // Берём именно 2 персоны по индексам
+        List<Person> pair = Arrays.asList(
+                allPersons.get(idxList.get(0)),
+                allPersons.get(idxList.get(1))
+        );
 
-        // Кодируем фото
+        // Кодируем фото в base64
         pair.forEach(p -> {
             if (p.getPhoto() != null && p.getPhoto().length > 0) {
                 String base64 = Base64.getEncoder().encodeToString(p.getPhoto());
                 p.setBase64Photo("data:image/jpeg;base64," + base64);
+            } else {
+                // Если фото нет, подставим заглушку
+                p.setBase64Photo("https://via.placeholder.com/300x300.png?text=No+Photo");
             }
         });
 
         return pair;
     }
-    private List<Person> getRandomPair(){
-        Random random = new Random();
-        HashSet<Integer> pare_0 = new HashSet<>();
-        while(pare_0.size() < 2){
-            int randomNumber = random.nextInt(serv.sizeDB());
-            pare_0.add(randomNumber);
-        }
-        ArrayList<Integer> pare_1 = new ArrayList<>(pare_0);
-        List<Person> allPersons = serv.getAllPersons();
 
-        List<Person> pair = allPersons.subList(pare_1.getFirst(), pare_1.get(1));
-
-        // Кодируем фото
-        pair.forEach(p -> {
-            if (p.getPhoto() != null && p.getPhoto().length > 0) {
-                String base64 = Base64.getEncoder().encodeToString(p.getPhoto());
-                p.setBase64Photo("data:image/jpeg;base64," + base64);
-            }
-        });
-
-        return pair;
-    }
     @GetMapping("/pair")
-    public List<Person> getPair(long id_win) {
+    public List<Person> getPair(@RequestParam(required = false) Long id_win) {
         return getRandomPair(id_win);
     }
 
     @PostMapping("/NewElo")
     public void newElo(@RequestParam Long winnerId, @RequestParam Long loserId) {
-        Person win = serv.getPersonById(winnerId);
-        Person lose = serv.getPersonById(loserId);
+        int ratingA = serv.getPersonById(winnerId).getElo();
+        int ratingB = serv.getPersonById(loserId).getElo();
 
-        if (win != null && lose != null) {
-            int ratingA = win.getElo();
-            int ratingB = lose.getElo();
-            int k = 32;
+        int newRatingA = ratingA + ratingB/100*10;
+        int newRatingB = ratingB - ratingB/100*10;
 
-            double expectedScoreA = calculate.calculateExpectedScore(ratingA, ratingB);
-            double expectedScoreB = calculate.calculateExpectedScore(ratingB, ratingA);
-
-            int newRatingA = calculate.calculateNewRating(ratingA, expectedScoreA, 1.0, k);
-            int newRatingB = calculate.calculateNewRating(ratingB, expectedScoreB, 0.0, k);
-
-            serv.setNewElo(winnerId, newRatingA);
-            serv.setNewElo(loserId, newRatingB);
-        }
+        serv.updateRatings(winnerId, newRatingA, loserId, newRatingB);
+    }
+    @GetMapping("/top")
+    public List<Person> getTop(){
+        List<Person> peoples = serv.getAllPersons();
+        peoples.sort((a, b) -> b.getElo() - a.getElo());
+        return peoples;
     }
 }
