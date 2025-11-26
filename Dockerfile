@@ -5,9 +5,22 @@ WORKDIR /app
 # Копируем исходный код
 COPY . .
 
-# Даем права и собираем проект
-RUN chmod +x gradlew && \
-    ./gradlew clean bootJar --no-daemon
+# Даем права на выполнение gradlew
+RUN chmod +x ./gradlew
+
+# Собираем jar
+RUN ./gradlew clean bootJar --no-daemon
+
+# Финальный образ — только JDK для запуска (JDK 17)
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# Копируем собранный JAR из первого образа
+COPY --from=0 /app/build/libs/*.jar app.jar
+
+# Открываем порт
+EXPOSE 8080
 
 # Запускаем приложение
-ENTRYPOINT ["java", "-jar", "build/libs/*.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
