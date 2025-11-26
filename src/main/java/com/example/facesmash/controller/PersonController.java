@@ -53,6 +53,10 @@ public class PersonController {
     public List<Person> getPair(@RequestParam(required = false) Long id_win) {
         return getRandomPair(id_win);
     }
+    @GetMapping("/")
+    public String default(){
+        return "Hello its working";
+    }
 
     @PostMapping("/NewElo")
     public void newElo(@RequestParam Long winnerId, @RequestParam Long loserId) {
