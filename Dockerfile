@@ -1,30 +1,25 @@
-FROM eclipse-temurin:21-jdk AS build
+# ---- Build Stage ----
+FROM gradle:8.8-jdk21 AS build
 WORKDIR /app
 
-# Копируем Gradle/Maven файлы
-COPY build.gradle settings.gradle gradlew ./
+# Копируем только файлы для кэша зависимостей
+COPY build.gradle settings.gradle ./
 COPY gradle ./gradle
 
-# Загружаем зависимости (кэш)
-RUN ./gradlew dependencies || true
+RUN gradle dependencies --no-daemon || true
 
-# Копируем проект
+# Копируем весь проект
 COPY . .
 
-# Собираем JAR
-RUN ./gradlew bootJar
+# Собираем Spring Boot JAR
+RUN gradle bootJar --no-daemon
 
-# ─────────────────────────────────────────────
-
+# ---- Run Stage ----
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Копируем JAR
 COPY --from=build /app/build/libs/*.jar app.jar
 
-# Порт приложения
 EXPOSE 8080
 
-ENV JAVA_OPTS="-Xms256m -Xmx512m"
-
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
