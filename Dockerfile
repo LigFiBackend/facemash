@@ -2,16 +2,12 @@
 FROM gradle:8.8-jdk21 AS build
 WORKDIR /app
 
-# Копируем только файлы для кэша зависимостей
-COPY build.gradle settings.gradle ./
-COPY gradle ./gradle
-
-RUN gradle dependencies --no-daemon || true
-
-# Копируем весь проект
 COPY . .
 
-# Собираем Spring Boot JAR
+# Делаем gradlew исполняемым
+RUN chmod +x ./gradlew
+
+# Собираем JAR
 RUN ./gradlew bootJar --no-daemon
 
 # ---- Run Stage ----
@@ -21,5 +17,4 @@ WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
-
 ENTRYPOINT ["java", "-jar", "app.jar"]
