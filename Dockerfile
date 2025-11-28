@@ -1,16 +1,30 @@
-FROM gradle:8.2.1-jdk17 AS builder
-
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
+# Копируем Gradle/Maven файлы
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle ./gradle
 
-COPY src src
-RUN ./gradlew clean bootJar --no-daemon
-FROM eclipse-temurin:17-jdk-jammy
+# Загружаем зависимости (кэш)
+RUN ./gradlew dependencies || true
+
+# Копируем проект
+COPY . .
+
+# Собираем JAR
+RUN ./gradlew bootJar
+
+# ─────────────────────────────────────────────
+
+FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=builder /app/build/libs/*.jar ./app.jar
+
+# Копируем JAR
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Порт приложения
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+ENV JAVA_OPTS="-Xms256m -Xmx512m"
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
