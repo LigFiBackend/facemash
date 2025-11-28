@@ -12,7 +12,7 @@ RUN gradle dependencies --no-daemon || true
 COPY . .
 
 # Собираем Spring Boot JAR
-RUN gradle bootJar --no-daemon
+RUN ./gradlew bootJar --no-daemon
 
 # ---- Run Stage ----
 FROM eclipse-temurin:21-jre
